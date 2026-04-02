@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { getSession } from '@/lib/session';
 import DashboardHeader from '@/components/DashboardHeader';
 
@@ -64,7 +65,7 @@ const styles = {
     padding: '40px 32px',
   },
   welcome: {
-    marginBottom: '40px',
+    marginBottom: '32px',
   },
   welcomeTitle: {
     fontSize: '28px',
@@ -75,6 +76,38 @@ const styles = {
   welcomeSubtitle: {
     fontSize: '16px',
     color: '#6b7280',
+  },
+  ctaBar: {
+    display: 'flex',
+    gap: '16px',
+    flexWrap: 'wrap',
+    marginBottom: '40px',
+  },
+  bookRoomBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: '#0077b6',
+    color: '#fff',
+    textDecoration: 'none',
+    borderRadius: '10px',
+    padding: '12px 24px',
+    fontSize: '15px',
+    fontWeight: '600',
+    boxShadow: '0 4px 12px rgba(0, 119, 182, 0.3)',
+  },
+  myBookingsBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: '#fff',
+    color: '#0077b6',
+    textDecoration: 'none',
+    borderRadius: '10px',
+    padding: '12px 24px',
+    fontSize: '15px',
+    fontWeight: '600',
+    border: '2px solid #0077b6',
   },
   sectionTitle: {
     fontSize: '20px',
@@ -168,6 +201,15 @@ export default function DashboardPage() {
             · Ready to plan your next great adventure?
           </p>
         </section>
+
+        <div style={styles.ctaBar}>
+          <Link href="/bookings" style={styles.bookRoomBtn} aria-label="Book a room or hotel">
+            🏨 Book a Room
+          </Link>
+          <Link href="/bookings" style={styles.myBookingsBtn} aria-label="View my bookings">
+            📋 My Bookings
+          </Link>
+        </div>
 
         <section aria-labelledby="destinations-heading">
           <h2 id="destinations-heading" style={styles.sectionTitle}>
