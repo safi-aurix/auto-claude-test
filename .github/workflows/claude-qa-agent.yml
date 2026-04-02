@@ -15,9 +15,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0         # full history needed to find and check out the feature branch
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: anthropics/claude-code-action@v1
+
+      # Wait for a real open PR to exist before Claude starts
+      - name: Wait for linked PR
+        id: find-pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const issueTitle = issue.title;
+
+            // Poll for an open PR for up to 10 minutes
+            for (let i = 0; i < 20; i++) {
+              const prs = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open'
+              });
+
+              if (prs.data.length > 0) {
+                const pr = prs.data[0]; // most recent open PR
+                console.log(`Found PR #${pr.number}: ${pr.title}`);
+                core.setOutput('pr_number', pr.number);
+                core.setOutput('pr_title', pr.title);
+                core.setOutput('pr_branch', pr.head.ref);
+                return;
+              }
+
+              console.log(`No open PR found yet, waiting 30s... (attempt ${i+1}/20)`);
+              await new Promise(r => setTimeout(r, 30000));
+            }
+
+            core.setFailed('No open PR found after 10 minutes. QA skipped.');
+
+      - name: Run QA Agent
+        if: steps.find-pr.outputs.pr_number != ''
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: '--allowedTools Bash(git:*),Bash(gh pr:*),Bash(gh issue:*),Bash(npm:*),Bash(python:*)'
@@ -27,16 +62,19 @@ jobs:
             Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
             Description: ${{ github.event.issue.body }}
 
+            The pull request to test is:
+            PR #${{ steps.find-pr.outputs.pr_number }}: ${{ steps.find-pr.outputs.pr_title }}
+            Branch: ${{ steps.find-pr.outputs.pr_branch }}
+
             Your task:
-            1. Find the open pull request related to this QA ticket
-            2. Check out that PR's branch
-            3. Run all existing tests
-            4. Write additional edge-case tests for the new feature
-            5. If all tests pass:
-               - Post a comment on the PR with the test results
-               - Approve the PR
-               - Close this QA issue with a passing summary
-            6. If tests fail:
-               - Post a comment on the PR detailing exactly what failed
+            1. Check out branch: ${{ steps.find-pr.outputs.pr_branch }}
+            2. Run all existing tests
+            3. Write additional edge-case tests for the new feature
+            4. If all tests pass:
+               - Post a comment on PR #${{ steps.find-pr.outputs.pr_number }} with test results
+               - Approve PR #${{ steps.find-pr.outputs.pr_number }}
+               - Close issue #${{ github.event.issue.number }} with a passing summary
+            5. If tests fail:
+               - Post detailed failure comments on PR #${{ steps.find-pr.outputs.pr_number }}
                - Request changes on the PR
-               - Close this QA issue with a failure summary so the coding agent can retry
+               - Close issue #${{ github.event.issue.number }} with a failure summary
