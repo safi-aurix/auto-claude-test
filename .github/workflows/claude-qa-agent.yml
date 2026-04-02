@@ -1,0 +1,42 @@
+name: QA Agent
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  qa:
+    if: github.event.label.name == 'qa-needed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0         # full history needed to find and check out the feature branch
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools Bash(git:*),Bash(gh pr:*),Bash(gh issue:*),Bash(npm:*),Bash(python:*)'
+          prompt: |
+            You are a QA agent. A QA ticket has been created:
+
+            Issue #${{ github.event.issue.number }}: ${{ github.event.issue.title }}
+            Description: ${{ github.event.issue.body }}
+
+            Your task:
+            1. Find the open pull request related to this QA ticket
+            2. Check out that PR's branch
+            3. Run all existing tests
+            4. Write additional edge-case tests for the new feature
+            5. If all tests pass:
+               - Post a comment on the PR with the test results
+               - Approve the PR
+               - Close this QA issue with a passing summary
+            6. If tests fail:
+               - Post a comment on the PR detailing exactly what failed
+               - Request changes on the PR
+               - Close this QA issue with a failure summary so the coding agent can retry
