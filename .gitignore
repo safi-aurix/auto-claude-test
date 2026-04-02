@@ -1,0 +1,14 @@
+# Next.js
+.next/
+out/
+
+# Node
+node_modules/
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Misc
+.DS_Store
+*.env.local
